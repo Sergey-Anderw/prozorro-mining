@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    
+    <!-- Version -->
+    <Version>1.0.0</Version>
+    <Authors>ProzorroMining Team</Authors>
+    <Description>ProzorroMining - Modular Monolith Architecture</Description>
+    
+    <!-- Analyzers -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>ProzorroMining.UnitTests</RootNamespace>
+    <AssemblyName>ProzorroMining.UnitTests</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Backend\ProzorroMining.Domain\ProzorroMining.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\Backend\ProzorroMining.App\ProzorroMining.App.csproj" />
+    <ProjectReference Include="..\..\..\src\Backend\ProzorroMining.Contracts\ProzorroMining.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
