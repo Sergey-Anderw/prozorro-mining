@@ -1,25 +1,47 @@
+using Serilog;
+using ProzorroMining.Api;
+using ProzorroMining.App;
+using ProzorroMining.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Configure Serilog
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "ProzorroMining.Api")
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
+        .WriteTo.Console(
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
+});
+
+// Configure services
+builder.Services
+    .AddSwaggerConfiguration()
+    .ConfigureJsonSerialization()
+    .AddInfrastructure(builder.Configuration)
+    .AddApplication()
+    .AddApi();
 
 var app = builder.Build();
 
 // Configure middleware
-if (app.Environment.IsDevelopment())
+app.UseSwaggerConfiguration();
+app.UseExceptionHandler("/error");
+app.UseSerilogRequestLogging(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.GetLevel = (httpContext, elapsed, ex) =>
+        ex != null ? Serilog.Events.LogEventLevel.Error :
+        httpContext.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error :
+        httpContext.Response.StatusCode >= 400 ? Serilog.Events.LogEventLevel.Warning :
+        Serilog.Events.LogEventLevel.Information;
+});
 app.UseHttpsRedirection();
 
 // Map endpoints
-var group = app.MapGroup("/api").WithName("API v1");
-
-group.MapGet("/health", () => new { status = "healthy" })
-    .WithName("HealthCheck")
-    .WithOpenApi();
+app.MapApiEndpoints();
 
 app.Run();
