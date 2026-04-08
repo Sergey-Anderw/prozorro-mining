@@ -34,5 +34,6 @@
     <!-- Utilities -->
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.2.2" />
     <PackageVersion Include="Microsoft.Codeanalysis.NetAnalyzers" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
   </ItemGroup>
 </Project>

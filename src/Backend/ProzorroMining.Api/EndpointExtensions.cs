@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics;
 
 namespace ProzorroMining.Api;
@@ -19,13 +20,21 @@ public static class EndpointExtensions
             .ExcludeFromDescription();
 
         // Map health checks with OpenAPI support
-        app.MapGet("/health/live", () => Results.Text("Healthy"))
+        app.MapGet("/health/live", async (HealthCheckService healthCheckService) =>
+        {
+            var result = await healthCheckService.CheckHealthAsync(predicate: _ => false);
+            return Results.Text(result.Status.ToString());
+        })
             .WithName("HealthLive")
             .WithDescription("Liveness probe - indicates if the application is running")
             .Produces(200, contentType: "text/plain")
             .WithOpenApi();
 
-        app.MapGet("/health/ready", () => Results.Text("Healthy"))
+        app.MapGet("/health/ready", async (HealthCheckService healthCheckService) =>
+        {
+            var result = await healthCheckService.CheckHealthAsync(predicate: _ => true);
+            return Results.Text(result.Status.ToString());
+        })
             .WithName("HealthReady")
             .WithDescription("Readiness probe - indicates if the application is ready to handle requests")
             .Produces(200, contentType: "text/plain")

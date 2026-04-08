@@ -21,6 +21,7 @@ builder.Host.UseSerilog((context, configuration) =>
 builder.Services
     .AddSwaggerConfiguration()
     .ConfigureJsonSerialization()
+    .AddDatabaseHealthChecks(builder.Configuration)
     .AddInfrastructure(builder.Configuration)
     .AddApplication()
     .AddApi();
