@@ -1,7 +1,6 @@
 using ProzorroMining.App.Features.Analytics;
 using ProzorroMining.App.Features.Imports;
 using ProzorroMining.App.Features.System;
-using ProzorroMining.Contracts;
 
 namespace ProzorroMining.Api;
 

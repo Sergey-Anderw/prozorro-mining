@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ProzorroMining.App\ProzorroMining.App.csproj" />
     <ProjectReference Include="..\ProzorroMining.Contracts\ProzorroMining.Contracts.csproj" />
+    <ProjectReference Include="..\ProzorroMining.Infrastructure\ProzorroMining.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics;
-using System.Linq;
 
 namespace ProzorroMining.Api;
 
