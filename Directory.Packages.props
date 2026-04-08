@@ -31,6 +31,9 @@
     <!-- Validation -->
     <PackageVersion Include="FluentValidation" Version="11.10.0" />
 
+    <!-- Application Handlers -->
+    <PackageVersion Include="Immediate.Handlers" Version="2.0.0" />
+
     <!-- Utilities -->
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.2.2" />
     <PackageVersion Include="Microsoft.Codeanalysis.NetAnalyzers" Version="8.0.0" />
