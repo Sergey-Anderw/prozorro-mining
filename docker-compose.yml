@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: prozorro
+      POSTGRES_USER: prozorro
+      POSTGRES_PASSWORD: prozorro
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prozorro"]
+      interval: 10s
+      retries: 5
+
+  db-migrator:
+    build:
+      context: .
+      dockerfile: src/Backend/Dockerfile
+      target: dbmigrator
+    restart: "no"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=prozorro;Username=prozorro;Password=prozorro;
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-restore:
+    image: postgres:16
+    restart: "no"
+    environment:
+      PGPASSWORD: prozorro
+    volumes:
+      - ./database/seed/prozorro_data.sql:/seed/prozorro_data.sql:ro
+    command: >
+      sh -c "
+      if [ \"$$(psql -h postgres -U prozorro -d prozorro -tAc 'select count(*) from tenders')\" != \"0\" ]; then
+        echo 'Seed restore skipped because tenders table already contains data.';
+      else
+        psql -v ON_ERROR_STOP=1 -h postgres -U prozorro -d prozorro -f /seed/prozorro_data.sql;
+      fi"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-migrator:
+        condition: service_completed_successfully
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Backend/Dockerfile
+      target: api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=prozorro;Username=prozorro;Password=prozorro;
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-migrator:
+        condition: service_completed_successfully
+      db-restore:
+        condition: service_completed_successfully
+    ports:
+      - '8080:8080'
+
+  frontend:
+    build:
+      context: .
+      dockerfile: src/Frontend/prozorro-dashboard/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - '3000:80'
+
+volumes:
+  postgres_data:

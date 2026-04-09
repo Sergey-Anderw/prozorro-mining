@@ -1,0 +1,258 @@
+.page {
+  min-height: 100vh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #8a6c2f;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  color: #1d2a3a;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+}
+
+.subtitle {
+  max-width: 640px;
+  margin: 16px 0 0;
+  color: #4c5a6b;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.primary-button,
+.secondary-button {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.primary-button {
+  background: #1f7a5c;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(31, 122, 92, 0.2);
+}
+
+.secondary-button {
+  background: #fff;
+  color: #1d2a3a;
+  border: 1px solid #d8e1ea;
+}
+
+.primary-button:hover,
+.secondary-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.summary-card,
+.panel,
+.status-panel,
+.alert {
+  border: 1px solid rgba(30, 50, 72, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px rgba(18, 34, 54, 0.07);
+}
+
+.summary-card {
+  padding: 24px;
+}
+
+.summary-card-accent {
+  background: linear-gradient(135deg, #173f5f, #246a73);
+  color: #fff;
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 16px;
+  color: inherit;
+  opacity: 0.78;
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-value {
+  display: block;
+  color: inherit;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 1;
+}
+
+.summary-value-small {
+  font-size: 1.6rem;
+}
+
+.summary-note {
+  display: block;
+  margin-top: 14px;
+  color: inherit;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+.status-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.status-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.status-row span {
+  color: #687789;
+  font-size: 0.9rem;
+}
+
+.status-row strong {
+  color: #1d2a3a;
+  font-size: 1rem;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.panel {
+  padding: 22px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  color: #1d2a3a;
+  font-size: 1.2rem;
+}
+
+.panel-header span {
+  color: #687789;
+  font-size: 0.9rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 0;
+  text-align: left;
+  border-bottom: 1px solid #e8eef3;
+}
+
+th {
+  color: #687789;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+td {
+  color: #1d2a3a;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: #687789;
+  border: 1px dashed #d8e1ea;
+  border-radius: 16px;
+}
+
+.alert {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  color: #7a4d10;
+  background: #fff6dd;
+}
+
+.alert-error {
+  color: #7a1d1d;
+  background: #ffe8e8;
+}
+
+@media (max-width: 960px) {
+  .hero,
+  .panel-header {
+    flex-direction: column;
+  }
+
+  .summary-grid,
+  .content-grid,
+  .status-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
+  }
+}
