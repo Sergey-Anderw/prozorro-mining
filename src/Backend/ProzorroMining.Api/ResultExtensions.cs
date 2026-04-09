@@ -2,19 +2,9 @@ using ProzorroMining.Contracts;
 
 namespace ProzorroMining.Api;
 
-/// <summary>
-/// Extension methods for mapping domain Result types to HTTP IResult responses.
-/// </summary>
 internal static class ResultExtensions
 {
-    /// <summary>
-    /// Maps a domain Result to an HTTP IResult response.
-    /// Success: 200 OK
-    /// Validation failure: 400 BadRequest
-    /// Not found: 404 NotFound
-    /// Conflict: 409 Conflict
-    /// Unexpected: 500 InternalServerError
-    /// </summary>
+   
     public static IResult ToHttpResult(this Result result)
     {
         if (result.IsSuccess)
@@ -50,14 +40,7 @@ internal static class ResultExtensions
         };
     }
 
-    /// <summary>
-    /// Maps a generic domain Result to an HTTP IResult response with data.
-    /// Success: 200 OK with data
-    /// Validation failure: 400 BadRequest
-    /// Not found: 404 NotFound
-    /// Conflict: 409 Conflict
-    /// Unexpected: 500 InternalServerError
-    /// </summary>
+    
     public static IResult ToHttpResult<T>(this Result<T> result, int? successStatusCode = null)
     {
         if (result.IsSuccess)

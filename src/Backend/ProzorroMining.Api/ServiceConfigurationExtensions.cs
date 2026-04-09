@@ -1,18 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ProzorroMining.App.Features.Imports;
 
 namespace ProzorroMining.Api;
 
-/// <summary>
-/// Extension methods for configuring application services and options.
-/// </summary>
 public static class ServiceConfigurationExtensions
 {
-    /// <summary>
-    /// Configures JSON serialization options for HTTP endpoints.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The service collection for chaining.</returns>
+   
     public static IServiceCollection ConfigureJsonSerialization(this IServiceCollection services)
     {
         services.ConfigureHttpJsonOptions(options =>
@@ -25,15 +19,17 @@ public static class ServiceConfigurationExtensions
         return services;
     }
 
-    /// <summary>
-    /// Adds database readiness checks for PostgreSQL.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">The application configuration.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddDatabaseHealthChecks(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddDatabaseHealthChecks(this IServiceCollection services)
     {
         services.AddHealthChecks();
+        return services;
+    }
+
+    public static IServiceCollection AddImportExecutionQueue(this IServiceCollection services)
+    {
+        services.AddSingleton<ImportExecutionQueue>();
+        services.AddSingleton<IImportExecutionQueue>(sp => sp.GetRequiredService<ImportExecutionQueue>());
+        services.AddHostedService(sp => sp.GetRequiredService<ImportExecutionQueue>());
         return services;
     }
 }

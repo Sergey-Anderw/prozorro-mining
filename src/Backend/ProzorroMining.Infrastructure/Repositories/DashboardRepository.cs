@@ -4,10 +4,6 @@ using ProzorroMining.App.Abstractions.Persistence;
 using ProzorroMining.Infrastructure.Db;
 
 namespace ProzorroMining.Infrastructure.Repositories;
-
-/// <summary>
-/// Dapper-backed dashboard analytics queries.
-/// </summary>
 public sealed class DashboardRepository : IDashboardRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
@@ -34,9 +30,7 @@ public sealed class DashboardRepository : IDashboardRepository
             )
             SELECT COALESCE(
                 SUM(
-                    GREATEST(
-                        COALESCE(t.expected_amount, 0) - COALESCE(ct.total_contract_amount, 0),
-                        0)),
+                    COALESCE(t.expected_amount, 0) - COALESCE(ct.total_contract_amount, 0)),
                 0)
             FROM tenders t
             LEFT JOIN contract_totals ct ON ct.tender_id = t.id;
@@ -50,30 +44,25 @@ public sealed class DashboardRepository : IDashboardRepository
             )
             SELECT
                 COALESCE(NULLIF(t.procuring_entity_name, ''), 'Unknown') AS Name,
-                COALESCE(SUM(t.expected_amount), 0) AS BudgetAmount,
-                COALESCE(
-                    SUM(
-                        GREATEST(
-                            COALESCE(t.expected_amount, 0) - COALESCE(ct.total_contract_amount, 0),
-                            0)),
-                    0) AS TotalSavings
+                COALESCE(SUM(COALESCE(ct.total_contract_amount, 0)), 0) AS TotalContractValue,
+                COALESCE(SUM(COALESCE(t.expected_amount, 0) - COALESCE(ct.total_contract_amount, 0)), 0) AS TotalSavings
             FROM tenders t
             LEFT JOIN contract_totals ct ON ct.tender_id = t.id
             GROUP BY COALESCE(NULLIF(t.procuring_entity_name, ''), 'Unknown')
-            ORDER BY BudgetAmount DESC, Name ASC
+            ORDER BY TotalContractValue DESC, Name ASC
             LIMIT 5;
             """;
 
         const string topSuppliersSql = """
             SELECT
                 s.name AS Name,
-                COUNT(c.id) AS ContractCount,
+                COUNT(c.id)::integer AS ContractCount,
                 COALESCE(SUM(c.contract_amount), 0) AS TotalValue
             FROM suppliers s
             INNER JOIN tender_suppliers ts ON ts.supplier_id = s.id
             INNER JOIN contracts c ON c.tender_id = ts.tender_id
             GROUP BY s.name
-            ORDER BY ContractCount DESC, TotalValue DESC, Name ASC
+            ORDER BY TotalValue DESC, Name ASC
             LIMIT 5;
             """;
 

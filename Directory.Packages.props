@@ -16,6 +16,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
+    <PackageVersion Include="System.Threading.RateLimiting" Version="8.0.0" />
 
     <!-- Data Access -->
     <PackageVersion Include="Dapper" Version="2.1.15" />

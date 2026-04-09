@@ -11,10 +11,19 @@ internal sealed class ProzorroApiEnvelopeDto
     public ProzorroNextPageDto? NextPage { get; init; }
 }
 
+internal sealed class ProzorroTenderDetailEnvelopeDto
+{
+    [JsonPropertyName("data")]
+    public ProzorroTenderDto? Data { get; init; }
+}
+
 internal sealed class ProzorroNextPageDto
 {
     [JsonPropertyName("offset")]
     public string? Offset { get; init; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; init; }
 }
 
 internal sealed class ProzorroTenderDto

@@ -5,7 +5,6 @@ using ProzorroMining.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 builder.Host.UseSerilog((context, configuration) =>
 {
     configuration
@@ -17,18 +16,17 @@ builder.Host.UseSerilog((context, configuration) =>
             outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
 });
 
-// Configure services
 builder.Services
     .AddSwaggerConfiguration()
     .ConfigureJsonSerialization()
-    .AddDatabaseHealthChecks(builder.Configuration)
+    .AddDatabaseHealthChecks()
+    .AddImportExecutionQueue()
     .AddInfrastructure(builder.Configuration)
-    .AddApplication()
-    .AddApi();
+    .AddApplication();
+   
 
 var app = builder.Build();
 
-// Configure middleware
 app.UseSwaggerConfiguration();
 app.UseExceptionHandler("/error");
 app.UseSerilogRequestLogging(options =>
@@ -42,7 +40,6 @@ app.UseSerilogRequestLogging(options =>
 });
 app.UseHttpsRedirection();
 
-// Map endpoints
 app.MapApiEndpoints();
 
 app.Run();

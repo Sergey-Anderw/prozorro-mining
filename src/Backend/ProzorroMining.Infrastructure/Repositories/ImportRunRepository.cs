@@ -4,10 +4,6 @@ using ProzorroMining.App.Abstractions.Persistence;
 using ProzorroMining.Infrastructure.Db;
 
 namespace ProzorroMining.Infrastructure.Repositories;
-
-/// <summary>
-/// Dapper-backed persistence for import run data.
-/// </summary>
 public sealed class ImportRunRepository : IImportRunRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
@@ -28,10 +24,15 @@ public sealed class ImportRunRepository : IImportRunRepository
     {
         const string sql = """
             SELECT
+                id AS ImportRunId,
                 status AS Status,
                 started_at AS StartedAt,
+                finished_at AS FinishedAt,
                 processed_count AS ProcessedCount,
-                failed_count AS FailedCount
+                inserted_count AS InsertedCount,
+                updated_count AS UpdatedCount,
+                failed_count AS FailedCount,
+                error_message AS ErrorMessage
             FROM import_runs
             ORDER BY started_at DESC NULLS LAST, id DESC
             LIMIT 1;
@@ -39,20 +40,39 @@ public sealed class ImportRunRepository : IImportRunRepository
 
         _logger.LogDebug("Reading latest import run snapshot from PostgreSQL.");
         await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<ImportRunStatusSnapshot>(
+            new CommandDefinition(
+                sql,
+                commandTimeout: _commandSettings.CommandTimeoutSeconds,
+                cancellationToken: cancellationToken));
+    }
 
-        try
-        {
-            return await connection.QuerySingleOrDefaultAsync<ImportRunStatusSnapshot>(
-                new CommandDefinition(
-                    sql,
-                    commandTimeout: _commandSettings.CommandTimeoutSeconds,
-                    cancellationToken: cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to read latest import run snapshot from PostgreSQL.");
-            throw;
-        }
+    public async Task<ImportRunStatusSnapshot?> GetByIdAsync(long importRunId, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT
+                id AS ImportRunId,
+                status AS Status,
+                started_at AS StartedAt,
+                finished_at AS FinishedAt,
+                processed_count AS ProcessedCount,
+                inserted_count AS InsertedCount,
+                updated_count AS UpdatedCount,
+                failed_count AS FailedCount,
+                error_message AS ErrorMessage
+            FROM import_runs
+            WHERE id = @ImportRunId
+            LIMIT 1;
+            """;
+
+        _logger.LogDebug("Reading import run {ImportRunId} snapshot from PostgreSQL.", importRunId);
+        await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<ImportRunStatusSnapshot>(
+            new CommandDefinition(
+                sql,
+                new { ImportRunId = importRunId },
+                commandTimeout: _commandSettings.CommandTimeoutSeconds,
+                cancellationToken: cancellationToken));
     }
 
     public async Task<long> CreateAsync(CreateImportRunRecord record, CancellationToken cancellationToken)
@@ -84,20 +104,54 @@ public sealed class ImportRunRepository : IImportRunRepository
             record.Status,
             record.StartedAt);
         await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
+        return await connection.ExecuteScalarAsync<long>(
+            new CommandDefinition(
+                sql,
+                record,
+                commandTimeout: _commandSettings.CommandTimeoutSeconds,
+                cancellationToken: cancellationToken));
+    }
 
-        try
-        {
-            return await connection.ExecuteScalarAsync<long>(
-                new CommandDefinition(
-                    sql,
-                    record,
-                    commandTimeout: _commandSettings.CommandTimeoutSeconds,
-                    cancellationToken: cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create import run record in PostgreSQL.");
-            throw;
-        }
+    public async Task UpdateCompletionAsync(long importRunId, CompleteImportRunRecord record, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            UPDATE import_runs
+            SET
+                finished_at = @FinishedAt,
+                status = @Status,
+                processed_count = @ProcessedCount,
+                inserted_count = @InsertedCount,
+                updated_count = @UpdatedCount,
+                failed_count = @FailedCount,
+                error_message = @ErrorMessage
+            WHERE id = @ImportRunId;
+            """;
+
+        _logger.LogDebug(
+            "Completing import run {ImportRunId} with status {Status}. Processed: {ProcessedCount}, Inserted: {InsertedCount}, Updated: {UpdatedCount}, Failed: {FailedCount}.",
+            importRunId,
+            record.Status,
+            record.ProcessedCount,
+            record.InsertedCount,
+            record.UpdatedCount,
+            record.FailedCount);
+        await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    ImportRunId = importRunId,
+                    record.FinishedAt,
+                    record.Status,
+                    record.ProcessedCount,
+                    record.InsertedCount,
+                    record.UpdatedCount,
+                    record.FailedCount,
+                    record.ErrorMessage
+                },
+                commandTimeout: _commandSettings.CommandTimeoutSeconds,
+                cancellationToken: cancellationToken));
     }
 }

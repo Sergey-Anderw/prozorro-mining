@@ -26,9 +26,9 @@ internal sealed class ProzorroApiParser : IProzorroApiParser
             var page = ProzorroMappings.ToModel(envelope, rawPayload);
 
             _logger.LogDebug(
-                "Parsed Prozorro tenders page. Items: {ItemCount}, NextOffset present: {HasNextOffset}.",
+                "Parsed Prozorro tenders page. Items: {ItemCount}, NextPath present: {HasNextPath}.",
                 page.Items.Count,
-                !string.IsNullOrWhiteSpace(page.NextOffset));
+                !string.IsNullOrWhiteSpace(page.NextPath));
 
             return page;
         }

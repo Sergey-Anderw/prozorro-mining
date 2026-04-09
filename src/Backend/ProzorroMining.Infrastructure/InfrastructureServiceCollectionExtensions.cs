@@ -14,18 +14,8 @@ using ProzorroMining.Infrastructure.Repositories;
 using Npgsql;
 
 namespace ProzorroMining.Infrastructure;
-
-/// <summary>
-/// Extension methods for configuring the infrastructure layer services.
-/// </summary>
 public static class InfrastructureServiceCollectionExtensions
 {
-    /// <summary>
-    /// Adds infrastructure layer services to the dependency injection container.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">The application configuration.</param>
-    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -67,11 +57,18 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
 
         services.AddScoped<IImportRunRepository, ImportRunRepository>();
+        services.AddScoped<IImportCheckpointRepository, ImportCheckpointRepository>();
         services.AddScoped<IDashboardRepository, DashboardRepository>();
-        services.AddScoped<ITenderRepository, TenderRepository>();
-        services.AddScoped<ISupplierRepository, SupplierRepository>();
-        services.AddScoped<IContractRepository, ContractRepository>();
+        services.AddScoped<IImportedTenderPersistence, ImportedTenderPersistence>();
         services.AddScoped<IProzorroApiParser, ProzorroApiParser>();
+        services.AddScoped<ProzorroApiDetailParser>();
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<ProzorroApiOptions>>().Value;
+            return new ProzorroDetailRequestLimiter(
+                options.DetailRateLimit.RequestsPerSecond,
+                options.DetailRateLimit.QueueLimit);
+        });
 
         services.AddHttpClient<IProzorroApiTransport, ProzorroApiTransport>((serviceProvider, client) =>
         {
@@ -129,6 +126,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IProzorroApiClient>(sp => new ProzorroApiClient(
             sp.GetRequiredService<IProzorroApiTransport>(),
             sp.GetRequiredService<IProzorroApiParser>(),
+            sp.GetRequiredService<ProzorroApiDetailParser>(),
             sp.GetRequiredService<ILogger<ProzorroApiClient>>()));
 
         return services;

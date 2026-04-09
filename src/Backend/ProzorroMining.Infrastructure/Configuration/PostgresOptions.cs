@@ -2,9 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ProzorroMining.Infrastructure.Configuration;
 
-/// <summary>
-/// PostgreSQL settings used by the infrastructure layer.
-/// </summary>
 public sealed class PostgresOptions
 {
     public const string SectionName = "Postgres";

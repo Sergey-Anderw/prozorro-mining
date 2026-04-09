@@ -16,8 +16,13 @@ internal static class ProzorroMappings
             .ToList()
             ?? [];
 
-        return new ProzorroTendersPage(envelope?.NextPage?.Offset, items);
+        return new ProzorroTendersPage(envelope?.NextPage?.Path, items);
     }
+
+    public static ProzorroTenderData? ToModel(
+        ProzorroTenderDetailEnvelopeDto? envelope,
+        string rawPayload) =>
+        envelope?.Data?.ToModel(rawPayload);
 
     private static ProzorroTenderData? ToModel(this ProzorroTenderDto dto, string rawPayload)
     {
@@ -28,7 +33,7 @@ internal static class ProzorroMappings
 
         return new ProzorroTenderData(
             dto.Id,
-            dto.Status ?? "unknown",
+            dto.Status ?? string.Empty,
             dto.Items?
                 .Select(x => x.Classification?.Id)
                 .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)),

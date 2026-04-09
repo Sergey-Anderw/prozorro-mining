@@ -2,39 +2,39 @@ using Microsoft.Extensions.Logging;
 using ProzorroMining.App.Abstractions.Prozorro;
 
 namespace ProzorroMining.Infrastructure.Prozorro;
-
-/// <summary>
-/// Typed HTTP client for the external Prozorro API.
-/// </summary>
 public sealed class ProzorroApiClient : IProzorroApiClient
 {
     private readonly IProzorroApiTransport _transport;
     private readonly IProzorroApiParser _parser;
-    private readonly ILogger<ProzorroApiClient> _logger;
+    private readonly ProzorroApiDetailParser _detailParser;
 
     internal ProzorroApiClient(
         IProzorroApiTransport transport,
         IProzorroApiParser parser,
+        ProzorroApiDetailParser detailParser,
         ILogger<ProzorroApiClient> logger)
     {
         _transport = transport;
         _parser = parser;
-        _logger = logger;
+        _detailParser = detailParser;
     }
 
     public async Task<ProzorroTendersPage> GetTendersPageAsync(
-        string? offset,
-        int? limit,
+        string? nextPagePath,
+        bool descending,
         CancellationToken cancellationToken)
     {
-        var rawPayload = await _transport.GetTendersPageAsync(offset, limit, cancellationToken);
+        var rawPayload = await _transport.GetTendersPageAsync(nextPagePath, descending, cancellationToken);
         var page = _parser.ParseTendersPage(rawPayload);
 
-        _logger.LogInformation(
-            "Prozorro tenders page retrieved. ItemCount: {ItemCount}, NextOffset present: {HasNextOffset}.",
-            page.Items.Count,
-            !string.IsNullOrWhiteSpace(page.NextOffset));
-
         return page;
+    }
+
+    public async Task<ProzorroTenderData?> GetTenderAsync(string tenderId, CancellationToken cancellationToken)
+    {
+        var rawPayload = await _transport.GetTenderAsync(tenderId, cancellationToken);
+        var tender = _detailParser.ParseTender(rawPayload);
+
+        return tender;
     }
 }

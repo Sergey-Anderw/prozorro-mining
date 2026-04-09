@@ -1,15 +1,7 @@
 namespace ProzorroMining.Api;
 
-/// <summary>
-/// Extension methods for configuring Swagger/OpenAPI.
-/// </summary>
 public static class SwaggerExtensions
 {
-    /// <summary>
-    /// Adds and configures Swagger/OpenAPI services.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddSwaggerConfiguration(this IServiceCollection services)
     {
         services.AddEndpointsApiExplorer();
@@ -26,10 +18,6 @@ public static class SwaggerExtensions
         return services;
     }
 
-    /// <summary>
-    /// Configures Swagger/OpenAPI middleware.
-    /// </summary>
-    /// <param name="app">The WebApplication.</param>
     public static void UseSwaggerConfiguration(this WebApplication app)
     {
         if (app.Environment.IsDevelopment())

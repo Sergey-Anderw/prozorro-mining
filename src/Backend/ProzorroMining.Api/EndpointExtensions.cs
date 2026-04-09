@@ -4,23 +4,14 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics;
 
 namespace ProzorroMining.Api;
-
-/// <summary>
-/// Extension methods for configuring API endpoints.
-/// </summary>
 public static class EndpointExtensions
 {
-    /// <summary>
-    /// Maps all API v1 endpoints.
-    /// </summary>
-    /// <param name="app">The WebApplication.</param>
     public static void MapApiEndpoints(this WebApplication app)
     {
-        // Map error handler
+        
         app.MapGet("/error", HandleError)
             .ExcludeFromDescription();
 
-        // Map health checks with OpenAPI support
         app.MapGet("/health/live", async (HealthCheckService healthCheckService) =>
         {
             var result = await healthCheckService.CheckHealthAsync(predicate: _ => false);
@@ -41,7 +32,7 @@ public static class EndpointExtensions
             .Produces(200, contentType: "text/plain")
             .WithOpenApi();
 
-        // Discover and map all vertical slice endpoints
+       
         app.MapVerticalSlices();
     }
 
