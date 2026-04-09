@@ -124,7 +124,6 @@ function App() {
       })
 
       ensureOk(response, 'Import start')
-
       await response.json()
 
       await Promise.all([loadStatus(), loadDashboard()])
@@ -143,7 +142,8 @@ function App() {
           <p className="eyebrow">ProzorroMining</p>
           <h1>Аналітика закупівель електроенергії</h1>
           <p className="subtitle">
-            Загальна економія бюджету, топ-5 закупівельників та топ-5 постачальників на основі збережених даних Prozorro.
+            Загальна економія бюджету, топ-5 закупівельників та топ-5 постачальників на основі
+            збережених даних Prozorro.
           </p>
         </div>
         <div className="hero-actions">
@@ -164,7 +164,9 @@ function App() {
           <strong className="summary-value">
             {loadingDashboard ? 'Завантаження...' : currency.format(totalSavings)}
           </strong>
-          <span className="summary-note">Різниця між очікуваною вартістю та сумою підписаних контрактів.</span>
+          <span className="summary-note">
+            Різниця між очікуваною вартістю та сумою підписаних контрактів.
+          </span>
         </article>
 
         <article className="summary-card">
@@ -173,38 +175,11 @@ function App() {
             {loadingStatus ? 'Завантаження...' : status?.status ?? 'Pending'}
           </strong>
           <span className="summary-note">
-            {status?.lastRunAt ? `Старт: ${dateTime.format(new Date(status.lastRunAt))}` : 'Імпорт ще не запускався.'}
+            {status?.lastRunAt
+              ? `Старт: ${dateTime.format(new Date(status.lastRunAt))}`
+              : 'Імпорт ще не запускався.'}
           </span>
         </article>
-
-        <article className="summary-card">
-          <span className="summary-label">Оброблено тендерів</span>
-          <strong className="summary-value summary-value-small">
-            {loadingStatus ? 'Завантаження...' : status?.processedCount ?? 0}
-          </strong>
-          <span className="summary-note">
-            {status?.importRunId ? `Run #${status.importRunId}` : 'Немає активного run.'}
-          </span>
-        </article>
-      </section>
-
-      <section className="status-panel">
-        <div className="status-row">
-          <span>Inserted</span>
-          <strong>{status?.insertedCount ?? 0}</strong>
-        </div>
-        <div className="status-row">
-          <span>Updated</span>
-          <strong>{status?.updatedCount ?? 0}</strong>
-        </div>
-        <div className="status-row">
-          <span>Failed</span>
-          <strong>{status?.failedCount ?? 0}</strong>
-        </div>
-        <div className="status-row">
-          <span>Finished</span>
-          <strong>{status?.finishedAt ? dateTime.format(new Date(status.finishedAt)) : 'In progress'}</strong>
-        </div>
       </section>
 
       {status?.errorMessage ? <div className="alert alert-error">{status.errorMessage}</div> : null}
@@ -219,10 +194,7 @@ function App() {
             loading={loadingDashboard}
             emptyMessage="Ще немає даних по закупівельниках."
             columns={['Закупівельник', 'Сума контрактів']}
-            rows={topProcurers.map((row) => [
-              row.name,
-              currency.format(row.totalContractValue),
-            ])}
+            rows={topProcurers.map((row) => [row.name, currency.format(row.totalContractValue)])}
           />
         </article>
 
@@ -235,10 +207,7 @@ function App() {
             loading={loadingDashboard}
             emptyMessage="Ще немає даних по постачальниках."
             columns={['Постачальник', 'Сума контрактів']}
-            rows={topSuppliers.map((row) => [
-              row.name,
-              currency.format(row.totalContractValue),
-            ])}
+            rows={topSuppliers.map((row) => [row.name, currency.format(row.totalContractValue)])}
           />
         </article>
       </section>

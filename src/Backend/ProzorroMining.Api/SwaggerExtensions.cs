@@ -21,14 +21,11 @@ public static class SwaggerExtensions
 
     public static void UseSwaggerConfiguration(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
+        app.UseSwagger();
+        app.UseSwaggerUI(options =>
         {
-            app.UseSwagger();
-            app.UseSwaggerUI(options =>
-            {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "ProzorroMining API v1");
-                options.RoutePrefix = "swagger";
-            });
-        }
+            options.SwaggerEndpoint("/swagger/v1/swagger.json", "ProzorroMining API v1");
+            options.RoutePrefix = "swagger";
+        });
     }
 }

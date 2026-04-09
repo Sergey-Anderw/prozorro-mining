@@ -280,6 +280,8 @@ Services:
 - Frontend: `http://localhost:3000`
 - Swagger: `http://localhost:8080/swagger`
 
+Compose also includes a one-time `db-restore` step. It restores the committed SQL seed into PostgreSQL only when the database is empty.
+
 Useful commands:
 
 ```powershell
@@ -293,6 +295,8 @@ Important:
 
 - PostgreSQL data is stored in the named Docker volume `prozorromining_postgres_data`
 - do not run `docker compose down -v` if you want to keep already imported data
+- the committed seed file is located at [database/seed/prozorro_data.sql](database/seed/prozorro_data.sql)
+- on a fresh machine the first `docker compose up -d` will restore this seed automatically after migrations
 
 ## Current Frontend
 

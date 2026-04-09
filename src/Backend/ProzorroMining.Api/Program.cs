@@ -27,7 +27,12 @@ builder.Services
 
 var app = builder.Build();
 
-app.UseSwaggerConfiguration();
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "ProzorroMining API v1");
+    options.RoutePrefix = "swagger";
+});
 app.UseExceptionHandler("/error");
 app.UseSerilogRequestLogging(options =>
 {
