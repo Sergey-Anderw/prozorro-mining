@@ -116,12 +116,15 @@ public sealed class ProzorroApiClient : IProzorroApiClient
 
         if (!string.IsNullOrWhiteSpace(nextPagePath))
         {
-            if (Uri.TryCreate(nextPagePath, UriKind.Absolute, out var absoluteUri))
+            var candidate = nextPagePath.Trim();
+
+            if (Uri.TryCreate(candidate, UriKind.Absolute, out var absoluteUri)
+                && (absoluteUri.Scheme == Uri.UriSchemeHttp || absoluteUri.Scheme == Uri.UriSchemeHttps))
             {
                 return absoluteUri;
             }
 
-            return new Uri(_httpClient.BaseAddress!, nextPagePath);
+            return new Uri(_httpClient.BaseAddress!, candidate);
         }
 
         return descending
