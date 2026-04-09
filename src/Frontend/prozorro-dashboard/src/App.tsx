@@ -46,11 +46,11 @@ function App() {
   const [loadingDashboard, setLoadingDashboard] = useState(true)
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [startingImport, setStartingImport] = useState(false)
+  const [stoppingImport, setStoppingImport] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    void loadDashboard()
-    void loadStatus()
+    void Promise.all([loadDashboard(), loadStatus()])
   }, [])
 
   useEffect(() => {
@@ -126,7 +126,7 @@ function App() {
       ensureOk(response, 'Import start')
       await response.json()
 
-      await Promise.all([loadStatus(), loadDashboard()])
+      await loadStatus()
       setError(null)
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Не вдалося запустити імпорт.'))
@@ -135,6 +135,44 @@ function App() {
     }
   }
 
+  async function stopImport() {
+    setStoppingImport(true)
+
+    try {
+      const response = await fetch('/api/v1/import/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      })
+
+      ensureOk(response, 'Import stop')
+      await response.json()
+
+      await loadStatus()
+      setError(null)
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Не вдалося зупинити імпорт.'))
+    } finally {
+      setStoppingImport(false)
+    }
+  }
+
+  async function refreshPageData() {
+    await Promise.all([loadDashboard(), loadStatus()])
+  }
+
+  const importButtonText = startingImport
+    ? 'Запуск імпорту...'
+    : stoppingImport
+      ? 'Зупинка імпорту...'
+      : status?.status === 'Running'
+        ? 'Стоп'
+        : 'Оновити дані'
+
+  const importButtonAction = status?.status === 'Running' ? stopImport : startImport
+
   return (
     <main className="page">
       <section className="hero">
@@ -142,15 +180,18 @@ function App() {
           <p className="eyebrow">ProzorroMining</p>
           <h1>Аналітика закупівель електроенергії</h1>
           <p className="subtitle">
-            Загальна економія бюджету, топ-5 закупівельників та топ-5 постачальників на основі
-            збережених даних Prozorro.
+            Загальна економія бюджету, топ-5 закупівельників та топ-5 постачальників на
+            основі збережених даних Prozorro.
           </p>
         </div>
         <div className="hero-actions">
-          <button className="primary-button" onClick={startImport} disabled={startingImport}>
-            {startingImport ? 'Запуск імпорту...' : 'Оновити дані'}
+          <button
+            className="primary-button"
+            onClick={() => void importButtonAction()}
+            disabled={startingImport || stoppingImport}>
+            {importButtonText}
           </button>
-          <button className="secondary-button" onClick={() => void Promise.all([loadDashboard(), loadStatus()])}>
+          <button className="secondary-button" onClick={() => void refreshPageData()}>
             Оновити dashboard
           </button>
         </div>

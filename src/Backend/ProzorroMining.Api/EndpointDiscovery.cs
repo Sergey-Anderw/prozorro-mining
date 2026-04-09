@@ -8,6 +8,7 @@ internal static class EndpointDiscovery
     {
         endpoints.MapGetImportStatus();
         endpoints.MapRunImport();
+        endpoints.MapStopImport();
         endpoints.MapGetBudgetSavings();
         endpoints.MapGetTopProcurers();
         endpoints.MapGetTopSuppliers();
@@ -41,6 +42,21 @@ internal static class EndpointDiscovery
             .WithOpenApi()
             .Produces<RunImport.Response>(StatusCodes.Status202Accepted)
             .Accepts<RunImport.Command>("application/json");
+    }
+
+    private static void MapStopImport(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints
+            .MapPost("/api/v1/import/stop", async (StopImport.Command command, StopImport.Handler handler, CancellationToken cancellationToken) =>
+            {
+                var response = await handler.HandleAsync(command, cancellationToken);
+                return response.ToHttpResult();
+            })
+            .WithName("StopImport")
+            .WithDescription("Cancel the current import")
+            .WithOpenApi()
+            .Produces<StopImport.Response>(StatusCodes.Status200OK)
+            .Accepts<StopImport.Command>("application/json");
     }
 
     
