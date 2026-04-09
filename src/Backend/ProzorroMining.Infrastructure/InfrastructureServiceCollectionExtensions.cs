@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
@@ -33,7 +32,7 @@ public static class InfrastructureServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? configuration["ConnectionStrings:DefaultConnection"];
 
-        services.TryAddSingleton(sp =>
+        services.AddSingleton(sp =>
         {
             if (string.IsNullOrWhiteSpace(connectionString))
             {
@@ -60,8 +59,6 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IImportCheckpointRepository, ImportCheckpointRepository>();
         services.AddScoped<IDashboardRepository, DashboardRepository>();
         services.AddScoped<IImportedTenderPersistence, ImportedTenderPersistence>();
-        services.AddScoped<IProzorroApiParser, ProzorroApiParser>();
-        services.AddScoped<ProzorroApiDetailParser>();
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ProzorroApiOptions>>().Value;
@@ -70,29 +67,10 @@ public static class InfrastructureServiceCollectionExtensions
                 options.DetailRateLimit.QueueLimit);
         });
 
-        services.AddHttpClient<IProzorroApiTransport, ProzorroApiTransport>((serviceProvider, client) =>
+        services.AddHttpClient<IProzorroApiClient, ProzorroApiClient>((serviceProvider, client) =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<ProzorroApiOptions>>().Value;
-            var logger = serviceProvider.GetRequiredService<ILogger<ProzorroApiTransport>>();
-
-            if (Uri.TryCreate(options.ApiUrl, UriKind.Absolute, out var baseAddress))
-            {
-                client.BaseAddress = baseAddress;
-            }
-            else
-            {
-                logger.LogWarning(
-                    "Prozorro API base URL is not configured. External calls will fail until {Section}:ApiUrl is set.",
-                    ProzorroApiOptions.SectionName);
-            }
-
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-
-            if (!string.IsNullOrWhiteSpace(options.ApiKey))
-            {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
-            }
         })
         .AddResilienceHandler("prozorro-api", static (builder, context) =>
         {
@@ -122,12 +100,6 @@ public static class InfrastructureServiceCollectionExtensions
                 }
             });
         });
-
-        services.AddScoped<IProzorroApiClient>(sp => new ProzorroApiClient(
-            sp.GetRequiredService<IProzorroApiTransport>(),
-            sp.GetRequiredService<IProzorroApiParser>(),
-            sp.GetRequiredService<ProzorroApiDetailParser>(),
-            sp.GetRequiredService<ILogger<ProzorroApiClient>>()));
 
         return services;
     }

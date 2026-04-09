@@ -5,27 +5,17 @@ using ProzorroMining.App.Abstractions.Persistence;
 using ProzorroMining.Infrastructure.Db;
 
 namespace ProzorroMining.Infrastructure.Repositories;
-public sealed class ImportedTenderPersistence : IImportedTenderPersistence
+public sealed class ImportedTenderPersistence(
+    IDbConnectionFactory connectionFactory,
+    PostgresCommandSettings commandSettings,
+    ILogger<ImportedTenderPersistence> logger)
+    : IImportedTenderPersistence
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-    private readonly PostgresCommandSettings _commandSettings;
-    private readonly ILogger<ImportedTenderPersistence> _logger;
-
-    public ImportedTenderPersistence(
-        IDbConnectionFactory connectionFactory,
-        PostgresCommandSettings commandSettings,
-        ILogger<ImportedTenderPersistence> logger)
-    {
-        _connectionFactory = connectionFactory;
-        _commandSettings = commandSettings;
-        _logger = logger;
-    }
-
     public async Task<ImportedTenderPersistenceResult> PersistAsync(
         ImportedTenderPersistenceModel importedTender,
         CancellationToken cancellationToken)
     {
-        await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
+        await using var connection = await connectionFactory.CreateConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         try
@@ -41,7 +31,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Failed to persist tender aggregate {ProzorroTenderId}.", importedTender.Tender.ProzorroTenderId);
+            logger.LogError(ex, "Failed to persist tender aggregate {ProzorroTenderId}.", importedTender.Tender.ProzorroTenderId);
             throw;
         }
     }
@@ -91,7 +81,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
                 sql,
                 tender,
                 transaction,
-                _commandSettings.CommandTimeoutSeconds,
+                commandSettings.CommandTimeoutSeconds,
                 cancellationToken: cancellationToken));
     }
 
@@ -113,7 +103,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
                 deleteSql,
                 new { TenderId = tenderId },
                 transaction,
-                _commandSettings.CommandTimeoutSeconds,
+                commandSettings.CommandTimeoutSeconds,
                 cancellationToken: cancellationToken));
 
         foreach (var contractAmount in contractAmounts.Where(x => x > 0))
@@ -123,7 +113,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
                     insertSql,
                     new { TenderId = tenderId, ContractAmount = contractAmount },
                     transaction,
-                    _commandSettings.CommandTimeoutSeconds,
+                    commandSettings.CommandTimeoutSeconds,
                     cancellationToken: cancellationToken));
         }
     }
@@ -153,7 +143,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
                 deleteLinksSql,
                 new { TenderId = tenderId },
                 transaction,
-                _commandSettings.CommandTimeoutSeconds,
+                commandSettings.CommandTimeoutSeconds,
                 cancellationToken: cancellationToken));
 
         foreach (var supplierName in supplierNames
@@ -166,7 +156,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
                     upsertSupplierSql,
                     new { Name = supplierName },
                     transaction,
-                    _commandSettings.CommandTimeoutSeconds,
+                    commandSettings.CommandTimeoutSeconds,
                     cancellationToken: cancellationToken));
 
             await connection.ExecuteAsync(
@@ -174,7 +164,7 @@ public sealed class ImportedTenderPersistence : IImportedTenderPersistence
                     insertLinkSql,
                     new { TenderId = tenderId, SupplierId = supplierId },
                     transaction,
-                    _commandSettings.CommandTimeoutSeconds,
+                    commandSettings.CommandTimeoutSeconds,
                     cancellationToken: cancellationToken));
         }
     }

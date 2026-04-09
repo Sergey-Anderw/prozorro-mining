@@ -1,22 +1,18 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
-type DashboardResponse = {
+type SavingsResponse = {
   totalSavings: number
-  topProcurers: ProcurerInfo[]
-  topSuppliers: SupplierInfo[]
 }
 
 type ProcurerInfo = {
   name: string
   totalContractValue: number
-  totalSavings: number
 }
 
 type SupplierInfo = {
   name: string
-  contractCount: number
-  totalValue: number
+  totalContractValue: number
 }
 
 type ImportStatusResponse = {
@@ -43,7 +39,9 @@ const dateTime = new Intl.DateTimeFormat('uk-UA', {
 })
 
 function App() {
-  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null)
+  const [totalSavings, setTotalSavings] = useState(0)
+  const [topProcurers, setTopProcurers] = useState<ProcurerInfo[]>([])
+  const [topSuppliers, setTopSuppliers] = useState<SupplierInfo[]>([])
   const [status, setStatus] = useState<ImportStatusResponse | null>(null)
   const [loadingDashboard, setLoadingDashboard] = useState(true)
   const [loadingStatus, setLoadingStatus] = useState(true)
@@ -56,28 +54,38 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!status?.importRunId || status.status !== 'Running') {
+    if (status?.status !== 'Running') {
       return
     }
 
     const intervalId = window.setInterval(() => {
-      void loadStatus(status.importRunId)
+      void loadStatus()
     }, 5000)
 
     return () => window.clearInterval(intervalId)
-  }, [status?.importRunId, status?.status])
+  }, [status?.status])
 
   async function loadDashboard() {
     setLoadingDashboard(true)
 
     try {
-      const response = await fetch('/api/v1/analytics/dashboard')
-      if (!response.ok) {
-        throw new Error(`Dashboard request failed with ${response.status}`)
-      }
+      const [savingsResponse, procurersResponse, suppliersResponse] = await Promise.all([
+        fetch('/api/v1/analytics/savings'),
+        fetch('/api/v1/analytics/top-procurers'),
+        fetch('/api/v1/analytics/top-suppliers'),
+      ])
 
-      const data = (await response.json()) as DashboardResponse
-      setDashboard(data)
+      ensureOk(savingsResponse, 'Savings')
+      ensureOk(procurersResponse, 'Top procurers')
+      ensureOk(suppliersResponse, 'Top suppliers')
+
+      const savings = (await savingsResponse.json()) as SavingsResponse
+      const procurers = (await procurersResponse.json()) as ProcurerInfo[]
+      const suppliers = (await suppliersResponse.json()) as SupplierInfo[]
+
+      setTotalSavings(savings.totalSavings)
+      setTopProcurers(procurers)
+      setTopSuppliers(suppliers)
       setError(null)
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Не вдалося завантажити аналітику.'))
@@ -86,18 +94,12 @@ function App() {
     }
   }
 
-  async function loadStatus(importRunId?: number | null) {
+  async function loadStatus() {
     setLoadingStatus(true)
 
     try {
-      const url = importRunId
-        ? `/api/v1/import/status?importRunId=${importRunId}`
-        : '/api/v1/import/status'
-
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`Import status request failed with ${response.status}`)
-      }
+      const response = await fetch('/api/v1/import/status')
+      ensureOk(response, 'Import status')
 
       const data = (await response.json()) as ImportStatusResponse
       setStatus(data)
@@ -121,16 +123,11 @@ function App() {
         body: '{}',
       })
 
-      if (!response.ok) {
-        throw new Error(`Import start failed with ${response.status}`)
-      }
+      ensureOk(response, 'Import start')
 
-      const data = (await response.json()) as {
-        importRunId: number
-        status: string
-      }
+      await response.json()
 
-      await Promise.all([loadStatus(data.importRunId), loadDashboard()])
+      await Promise.all([loadStatus(), loadDashboard()])
       setError(null)
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Не вдалося запустити імпорт.'))
@@ -146,14 +143,14 @@ function App() {
           <p className="eyebrow">ProzorroMining</p>
           <h1>Аналітика закупівель електроенергії</h1>
           <p className="subtitle">
-            Огляд економії бюджету та ключових учасників на основі збережених даних Prozorro.
+            Загальна економія бюджету, топ-5 закупівельників та топ-5 постачальників на основі збережених даних Prozorro.
           </p>
         </div>
         <div className="hero-actions">
           <button className="primary-button" onClick={startImport} disabled={startingImport}>
             {startingImport ? 'Запуск імпорту...' : 'Оновити дані'}
           </button>
-          <button className="secondary-button" onClick={() => void Promise.all([loadDashboard(), loadStatus(status?.importRunId)])}>
+          <button className="secondary-button" onClick={() => void Promise.all([loadDashboard(), loadStatus()])}>
             Оновити dashboard
           </button>
         </div>
@@ -165,9 +162,9 @@ function App() {
         <article className="summary-card summary-card-accent">
           <span className="summary-label">Загальна економія</span>
           <strong className="summary-value">
-            {loadingDashboard ? 'Завантаження...' : currency.format(dashboard?.totalSavings ?? 0)}
+            {loadingDashboard ? 'Завантаження...' : currency.format(totalSavings)}
           </strong>
-          <span className="summary-note">Різниця між очікуваною вартістю та сумою контрактів.</span>
+          <span className="summary-note">Різниця між очікуваною вартістю та сумою підписаних контрактів.</span>
         </article>
 
         <article className="summary-card">
@@ -221,11 +218,10 @@ function App() {
           <SimpleTable
             loading={loadingDashboard}
             emptyMessage="Ще немає даних по закупівельниках."
-            columns={['Покупець', 'Сума контрактів', 'Економія']}
-            rows={(dashboard?.topProcurers ?? []).map((row) => [
+            columns={['Закупівельник', 'Сума контрактів']}
+            rows={topProcurers.map((row) => [
               row.name,
               currency.format(row.totalContractValue),
-              currency.format(row.totalSavings),
             ])}
           />
         </article>
@@ -238,11 +234,10 @@ function App() {
           <SimpleTable
             loading={loadingDashboard}
             emptyMessage="Ще немає даних по постачальниках."
-            columns={['Постачальник', 'Контракти', 'Сума']}
-            rows={(dashboard?.topSuppliers ?? []).map((row) => [
+            columns={['Постачальник', 'Сума контрактів']}
+            rows={topSuppliers.map((row) => [
               row.name,
-              row.contractCount.toString(),
-              currency.format(row.totalValue),
+              currency.format(row.totalContractValue),
             ])}
           />
         </article>
@@ -289,6 +284,12 @@ function SimpleTable({ loading, emptyMessage, columns, rows }: SimpleTableProps)
       </table>
     </div>
   )
+}
+
+function ensureOk(response: Response, operation: string) {
+  if (!response.ok) {
+    throw new Error(`${operation} request failed with ${response.status}`)
+  }
 }
 
 function getErrorMessage(error: unknown, fallbackMessage: string) {

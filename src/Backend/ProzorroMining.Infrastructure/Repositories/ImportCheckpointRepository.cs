@@ -1,5 +1,4 @@
 using Dapper;
-using Microsoft.Extensions.Logging;
 using ProzorroMining.App.Abstractions.Persistence;
 using ProzorroMining.Infrastructure.Db;
 
@@ -8,16 +7,15 @@ public sealed class ImportCheckpointRepository : IImportCheckpointRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly PostgresCommandSettings _commandSettings;
-    private readonly ILogger<ImportCheckpointRepository> _logger;
+
 
     public ImportCheckpointRepository(
         IDbConnectionFactory connectionFactory,
-        PostgresCommandSettings commandSettings,
-        ILogger<ImportCheckpointRepository> logger)
+        PostgresCommandSettings commandSettings)
     {
         _connectionFactory = connectionFactory;
         _commandSettings = commandSettings;
-        _logger = logger;
+   
     }
 
     public async Task<ImportCheckpointSnapshot?> GetAsync(string sourceName, CancellationToken cancellationToken)
@@ -32,7 +30,6 @@ public sealed class ImportCheckpointRepository : IImportCheckpointRepository
             LIMIT 1;
             """;
 
-        _logger.LogDebug("Reading import checkpoint for source {SourceName}.", sourceName);
         await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
 
         return await connection.QuerySingleOrDefaultAsync<ImportCheckpointSnapshot>(
@@ -53,11 +50,6 @@ public sealed class ImportCheckpointRepository : IImportCheckpointRepository
                 last_run_at = EXCLUDED.last_run_at,
                 updated_at = NOW();
             """;
-
-        _logger.LogDebug(
-            "Upserting import checkpoint for source {SourceName} with last seen date {LastSeenDate}.",
-            record.SourceName,
-            record.LastSeenDate);
 
         await using var connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(

@@ -1,336 +1,345 @@
-# ProzorroMining - Modular Monolith Architecture
+# ProzorroMining
 
-ProzorroMining is a modern web application built with a **modular monolith** architecture pattern, combining the benefits of monolithic simplicity with module-oriented design principles.
+ProzorroMining is a .NET 8 monorepo for importing public Prozorro tender data, storing filtered procurement data in PostgreSQL, and exposing analytics through a minimal API and a small React dashboard.
 
-## 🏗️ Architecture Overview
+The current scope is focused on:
 
-### Architectural Pattern: Modular Monolith
+- manual import of Prozorro tenders for electricity procurement
+- idempotent persistence into PostgreSQL
+- analytics endpoints for savings, top procurers, and top suppliers
+- a simple frontend dashboard
+- full local startup through `docker compose`
 
-This project implements a **modular monolith** with **vertical slices** inside modules:
+## What The Project Does
 
-```
-┌─────────────────────────────────────────────────┐
-│                   ProzorroMining                │
-│                                                 │
-│  ┌─────────────┐  ┌─────────────┐              │
-│  │   Module 1  │  │   Module 2  │  ...         │
-│  │             │  │             │              │
-│  │ ┌─────────┐ │  │ ┌─────────┐ │              │
-│  │ │Vertical │ │  │ │Vertical │ │              │
-│  │ │ Slice 1 │ │  │ │ Slice 1 │ │              │
-│  │ └─────────┘ │  │ └─────────┘ │              │
-│  │ ┌─────────┐ │  │ ┌─────────┐ │              │
-│  │ │Vertical │ │  │ │Vertical │ │              │
-│  │ │ Slice 2 │ │  │ │ Slice 2 │ │              │
-│  │ └─────────┘ │  │ └─────────┘ │              │
-│  └─────────────┘  └─────────────┘              │
-└─────────────────────────────────────────────────┘
-```
+The system imports tenders from the public Prozorro API and keeps only tenders that match the business rules:
 
-**Key Benefits:**
-- **Modularity**: Clear separation of concerns into distinct modules
-- **Vertical Slices**: Feature-complete slices with end-to-end functionality
-- **Single Deployment**: One deployable unit vs. microservices complexity
-- **Easier Testing**: Integration tests within modules without external services
-- **Team Autonomy**: Teams work on independent modules without conflicts
+- CPV code: `09310000-5`
+- tender status: `complete`
+- time window: last month
+- primary date: `dateModified`
+- fallback date: `dateCreated`
 
-### Dependency Flow
+For every eligible tender, the application:
 
-```
-┌─────────────┐
-│    API      │  HTTP entry point (ASP.NET Core Minimal API)
-└──────┬──────┘
-       │
-┌──────▼──────────┐
-│   Application   │  Use cases, orchestration
-└──────┬──────────┘
-       │
-┌──────┼──────────┐
-│      │          │
-▼      ▼          ▼
-Domain Contracts Infrastructure
-```
+- upserts the tender by `prozorro_tender_id`
+- refreshes contracts
+- refreshes tender-supplier links
+- reuses or inserts suppliers
+- tracks import progress in `import_runs`
+- updates `import_checkpoint` after successful completion
 
-**Strict Rules:**
-- ❌ API depends only on App & Contracts
-- ❌ App depends on Domain, Contracts, Infrastructure
-- ❌ Infrastructure depends on Domain
-- ❌ Domain has no dependencies (core of the system)
-- ❌ No circular dependencies
+On top of the imported data, the API exposes analytics for:
 
-## 📁 Project Structure
+- total budget savings
+- top 5 procurers by total contract value
+- top 5 suppliers by total contract value
 
-```
-ProzorroMining/
-├── src/
-│   ├── Backend/
-│   │   ├── ProzorroMining.Api              [ASP.NET Core Minimal API]
-│   │   ├── ProzorroMining.App              [Application Services]
-│   │   ├── ProzorroMining.Domain           [Business Logic & Entities]
-│   │   ├── ProzorroMining.Infrastructure   [Data Access & External Services]
-│   │   ├── ProzorroMining.Contracts        [DTOs & Shared Interfaces]
-│   │   └── ProzorroMining.DbMigrator       [Database Migrations Tool]
-│   │
-│   └── Frontend/
-│       └── prozorro-dashboard/             [React + TypeScript SPA]
-│           ├── src/
-│           │   ├── main.tsx
-│           │   ├── App.tsx
-│           │   └── index.css
-│           ├── package.json
-│           ├── tsconfig.json
-│           ├── vite.config.ts
-│           └── index.html
-│
-├── tests/
-│   └── Backend/
-│       ├── ProzorroMining.UnitTests        [Pure business logic tests]
-│       ├── ProzorroMining.IntegrationTests [Full stack integration tests]
-│       └── ProzorroMining.ArchitectureTests [Architecture & dependency rules]
-│
-├── global.json                             [.NET 8 LTS requirement]
-├── Directory.Build.props                   [Shared project settings]
-├── Directory.Packages.props                [Centralized NuGet versions]
-├── .editorconfig                           [Code style enforcement]
-├── ProzorroMining.sln                      [Solution file]
-└── README.md                               [This file]
-```
+## Stack
 
-## 🔧 Backend Stack
+### Backend
 
-### Technology Choices
+- .NET 8
+- ASP.NET Core Minimal API
+- Immediate.Handlers
+- FluentValidation
+- Serilog
+- PostgreSQL
+- Npgsql
+- Dapper
+- `IHttpClientFactory`
+- Microsoft HTTP resilience handlers
 
-| Component         | Technology      | Rationale                          |
-|-------------------|-----------------|-------------------------------------|
-| **Runtime**       | .NET 8          | LTS version, latest features       |
-| **API Framework** | ASP.NET Core    | Minimal APIs for lean endpoints    |
-| **ORM**           | Dapper          | Lightweight, efficient SQL access  |
-| **Database**      | PostgreSQL      | Reliable, ACID-compliant           |
-| **Testing**       | xUnit           | Modern .NET testing framework      |
-| **Logging**       | Serilog         | Structured logging                 |
-| **Validation**    | FluentValidation| Type-safe validation rules        |
+### Frontend
 
-### Why These Choices?
+- React
+- TypeScript
+- Vite
 
-- **No Entity Framework**: Dapper provides fine-grained control over queries without ORM overhead
-- **No MediatR**: Direct dependency injection for simpler, more transparent flow
-- **No Generic Repository**: Explicit data access methods per feature
-- **No Redis**: Start simple; add caching when bottlenecks are proven
-- **No API Gateway**: Direct client-to-service communication for initial phase
+### Infrastructure
 
-## 📱 Frontend Stack
+- `docker compose`
+- PostgreSQL 16 container
+- backend container
+- frontend container
+- database migrator container
 
-### Technology Choices
+## Architecture
 
-| Component      | Technology       | Rationale                          |
-|----------------|------------------|------------------------------------|
-| **Framework**  | React 18         | Declarative UI, large ecosystem    |
-| **Language**   | TypeScript       | Type safety, better IDE support    |
-| **Build Tool** | Vite             | Fast build times, ES modules       |
-| **Styling**    | CSS              | Future: Tailwind or styled-components |
+The backend is a modular monolith with vertical slices.
 
-## 🧪 Testing Strategy
+### Projects
 
-### Three-Layer Testing Pyramid
+- `src/Backend/ProzorroMining.Api`
+  HTTP entry point, endpoint mapping, Swagger, health checks, background import queue registration.
 
-```
-        ▲
-       /|\
-      / | \
-     /  |  \    Architecture Tests
-    /   |   \   (Dependency violations)
-   /    |    \
-  ┌─────┼─────┐
-  │     |     │  Integration Tests
-  │   Tests   │  (Full stack, Docker)
-  └─────┼─────┘
-        │
-     ┌──┴──┐
-     │Unit │  Unit Tests (Pure logic)
-     └─────┘
-```
+- `src/Backend/ProzorroMining.App`
+  Use cases, orchestration, validation, import workflow, analytics handlers, persistence abstractions.
 
-### Test Projects
+- `src/Backend/ProzorroMining.Domain`
+  Core enums and domain-level concepts.
 
-1. **UnitTests**
-   - Pure business logic without external dependencies
-   - Domain, value objects, helpers
-   - Fast, deterministic, no I/O
+- `src/Backend/ProzorroMining.Infrastructure`
+  PostgreSQL access, Dapper repositories, Prozorro HTTP client, parsing, rate limiting, migrations support.
 
-2. **IntegrationTests**
-   - Full feature flow from API to database
-   - Uses TestContainers for PostgreSQL
-   - Validates data persistence and retrieval
+- `src/Backend/ProzorroMining.Contracts`
+  Shared result model and cross-layer contracts.
 
-3. **ArchitectureTests**
-   - Enforces dependency rules
-   - Prevents accidental circular dependencies
-   - Validates layering principles
+- `src/Backend/ProzorroMining.DbMigrator`
+  Applies SQL migrations to PostgreSQL.
 
-## 🚀 Getting Started
+- `src/Frontend/prozorro-dashboard`
+  React dashboard for analytics and manual import trigger.
 
-### Prerequisites
+### Layering Rules
+
+- API depends on App and Infrastructure wiring only
+- App contains business orchestration and abstractions
+- Infrastructure contains SQL and external API access
+- Domain stays small and independent
+- SQL does not leak into API
+- business logic does not move into Infrastructure
+
+## Main Backend Approaches
+
+### 1. Minimal API + Thin Endpoints
+
+Endpoints are intentionally thin. They delegate to handlers and return typed results.
+
+### 2. Immediate.Handlers
+
+Application use cases are implemented as vertical-slice handlers instead of controllers plus service classes everywhere.
+
+### 3. PostgreSQL With NpgsqlDataSource
+
+The PostgreSQL integration uses `NpgsqlDataSource` as the primary integration point. Repositories use short-lived opened connections per operation. Dapper is used on top of those connections.
+
+### 4. Explicit Dapper Repositories
+
+There is no EF Core and no generic repository abstraction. Each repository exposes explicit operations that match the application use cases.
+
+### 5. Typed Prozorro API Client
+
+The public Prozorro API is accessed through a typed client registered via `IHttpClientFactory`.
+
+The client includes:
+
+- configured timeout
+- retry for transient HTTP failures
+- bounded detail request rate limiting
+- defensive JSON parsing
+
+### 6. Idempotent Import
+
+Import persistence is idempotent:
+
+- tender upsert by `prozorro_tender_id`
+- transaction per tender
+- child collections are refreshed, not appended blindly
+
+### 7. Single Active Import
+
+Only one import can run at a time.
+
+- a second `POST /api/v1/import/run` returns `409 Conflict`
+- stale `Running` imports are marked `Failed` when the application starts again
+
+## Import Flow
+
+The import is manual and asynchronous from the HTTP client's point of view.
+
+### Start
+
+`POST /api/v1/import/run`
+
+The endpoint:
+
+- creates a new `import_runs` record
+- rejects the request if another import is already running
+- enqueues background execution
+- returns `202 Accepted`
+
+### Execution
+
+The background import process:
+
+1. loads the current checkpoint
+2. requests the Prozorro feed starting from:
+   - `GET /api/2.5/tenders?descending=1`
+3. follows pagination using `next_page.path`
+4. stops when feed items are older than the effective filter window
+5. fetches details for candidate tenders through:
+   - `GET /api/2.5/tenders/{id}`
+6. applies business filters
+7. persists eligible tenders
+8. updates import progress counters
+9. finalizes `import_runs`
+10. updates `import_checkpoint`
+
+## Analytics Logic
+
+### Budget Savings
+
+Formula:
+
+`sum(expected_amount - total_contract_amount)`
+
+Negative values are possible. That means the total signed contract amount is greater than the expected amount for part of the stored data.
+
+### Top 5 Procurers
+
+Grouped by `procuringEntity.name`, ordered by total contract value descending, limited to 5.
+
+### Top 5 Suppliers
+
+Grouped by supplier name, ordered by total contract value descending, limited to 5.
+
+Note: supplier analytics are limited by the current schema because contracts are linked to tenders, not directly to a supplier-specific contract record. For the current task, this is acceptable, but it is less exact than the procurer aggregation.
+
+## API Endpoints
+
+### Import
+
+- `POST /api/v1/import/run`
+  Starts a manual import. Returns `202 Accepted`.
+
+- `GET /api/v1/import/status`
+  Returns the current running import if one exists, otherwise the latest import run.
+
+### Analytics
+
+- `GET /api/v1/analytics/savings`
+- `GET /api/v1/analytics/top-procurers`
+- `GET /api/v1/analytics/top-suppliers`
+
+### Health
+
+- `GET /health/live`
+
+### Swagger
+
+- `GET /swagger`
+
+## Database
+
+The current schema supports:
+
+- `tenders`
+- `contracts`
+- `suppliers`
+- `tender_suppliers`
+- `import_runs`
+- `import_checkpoint`
+
+The design is intended to support later analytics on large data volumes. The repository layer already uses SQL aggregations for dashboard queries.
+
+## Running Locally
+
+## Prerequisites
 
 - .NET 8 SDK
-- PostgreSQL 14+
-- Node.js 18+ (for frontend)
+- Node.js 20+
+- PostgreSQL
 
-### Backend Setup
+## Backend
 
-```bash
-# Restore dependencies
+```powershell
 dotnet restore
-
-# Build solution
 dotnet build
-
-# Run tests
-dotnet test
-
-# Run API
 dotnet run --project src/Backend/ProzorroMining.Api
 ```
 
-### Frontend Setup
+## Frontend
 
-```bash
+```powershell
 cd src/Frontend/prozorro-dashboard
-
-# Install dependencies
 npm install
-
-# Run development server
 npm run dev
-
-# Build for production
-npm run build
 ```
 
-## 📦 Project References
+Frontend runs through Vite and proxies API requests to the backend.
 
-### Backend Project Dependencies
+## Database Migrations
 
-```
-ProzorroMining.Api
-├── ProzorroMining.App
-└── ProzorroMining.Contracts
-
-ProzorroMining.App
-├── ProzorroMining.Domain
-├── ProzorroMining.Contracts
-└── ProzorroMining.Infrastructure
-
-ProzorroMining.Infrastructure
-└── ProzorroMining.Domain
-
-ProzorroMining.DbMigrator
-└── ProzorroMining.Infrastructure
-
-Test Projects
-├── ProzorroMining.UnitTests → Domain, App, Contracts
-├── ProzorroMining.IntegrationTests → Api, Infrastructure
-└── ProzorroMining.ArchitectureTests → All Backend Projects
+```powershell
+dotnet run --project src/Backend/ProzorroMining.DbMigrator
 ```
 
-## 🏛️ Layer Responsibilities
+## Running With Docker Compose
 
-### 🎯 API Layer (`ProzorroMining.Api`)
-- HTTP endpoint mapping
-- Request/response serialization
-- Authentication & authorization setup
-- OpenAPI/Swagger documentation
-- **Should NOT contain**: Business logic, data access
+The whole system can be started with:
 
-### 🔄 Application Layer (`ProzorroMining.App`)
-- Use case orchestration
-- Input validation
-- Business rule coordination
-- Transaction management
-- **Should NOT contain**: HTTP concerns, domain rules
+```powershell
+docker compose up -d
+```
 
-### 💼 Domain Layer (`ProzorroMining.Domain`)
-- Business entities
-- Value objects
-- Domain events
-- Pure business logic
-- **Should NOT contain**: Any external dependencies
+Services:
 
-### 📊 Infrastructure Layer (`ProzorroMining.Infrastructure`)
-- Database queries (Dapper)
-- PostgreSQL connections
-- External service integrations
-- **Should NOT contain**: Business logic, application flow
+- PostgreSQL: `localhost:5432`
+- API: `http://localhost:8080`
+- Frontend: `http://localhost:3000`
+- Swagger: `http://localhost:8080/swagger`
 
-### 📋 Contracts Layer (`ProzorroMining.Contracts`)
-- Request/Response DTOs
-- Shared interfaces
-- Exception types
-- Constants
-- **Purpose**: Cross-cutting communication
+Useful commands:
 
-## 🔒 Architecture Constraints
+```powershell
+docker compose ps -a
+docker compose logs -f api
+docker compose logs -f db-migrator
+docker compose logs -f frontend
+```
 
-To maintain module integrity:
+Important:
 
-1. **No Direct Database Imports in API**
-   - All data access through Application layer
+- PostgreSQL data is stored in the named Docker volume `prozorromining_postgres_data`
+- do not run `docker compose down -v` if you want to keep already imported data
 
-2. **Domain is Isolated**
-   - Can be tested without Database, HTTP, or external services
+## Current Frontend
 
-3. **Vertical Slices Within Modules**
-   - Each feature owns its complete vertical stack
+The dashboard page shows:
 
-4. **Future Patterns**
-   - **Modules** can evolve into separate deployment units
-   - **Vertical slices** can become event-driven boundaries
-   - **Domain events** can trigger cross-module communication
+- total budget savings
+- top 5 procurers
+- top 5 suppliers
+- current import status
+- button to start import
 
-## 🛠️ Configuration
+The frontend polls import status while an import is running.
 
-### `global.json`
-Enforces .NET 8 for all projects
+## Testing
 
-### `Directory.Build.props`
-Shared compilation settings:
-- Nullable reference types enabled
-- Latest C# language features
-- Strict compiler warnings
+The repository currently contains unit tests for import behavior and filtering logic.
 
-### `Directory.Packages.props`
-Centralized NuGet package versions for consistency
+Run tests:
 
-### `.editorconfig`
-Code style enforcement across all projects
+```powershell
+dotnet test tests/Backend/ProzorroMining.UnitTests/ProzorroMining.UnitTests.csproj
+```
 
-## 📝 Development Workflow
+## Known Limitations
 
-1. **Create vertical slice** within appropriate module
-2. **Start with Domain** (business rules)
-3. **Add Infrastructure** (data access)
-4. **Implement Application** (orchestration)
-5. **Expose via API** (endpoints)
-6. **Test each layer** (unit → integration → architecture)
+- supplier analytics are approximate for multi-supplier tenders because the schema does not yet link each contract to a specific supplier contract record
+- import execution is backgrounded in-process, not distributed
+- import is manual, not scheduled
 
-## 🔍 Next Steps
+## Repository Layout
 
-- [ ] Set up PostgreSQL database
-- [ ] Create initial database schema
-- [ ] Implement first feature (vertical slice)
-- [ ] Configure CI/CD pipeline
-- [ ] Add authentication/authorization
-- [ ] Implement logging & monitoring
-- [ ] Create API documentation
-- [ ] Deploy to staging environment
+```text
+src/
+  Backend/
+    ProzorroMining.Api
+    ProzorroMining.App
+    ProzorroMining.Contracts
+    ProzorroMining.DbMigrator
+    ProzorroMining.Domain
+    ProzorroMining.Infrastructure
+  Frontend/
+    prozorro-dashboard
+tests/
+  Backend/
+    ProzorroMining.UnitTests
+```
 
-## 📚 Resources
+## License
 
-- [Clean Architecture by Robert Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
-- [Vertical Slices Architecture](https://jimmybogard.com/vertical-slice-architecture/)
-- [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
-- [ASP.NET Core Minimal APIs](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis)
-- [Dapper Documentation](https://github.com/DapperLib/Dapper)
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT. See [LICENSE](LICENSE).

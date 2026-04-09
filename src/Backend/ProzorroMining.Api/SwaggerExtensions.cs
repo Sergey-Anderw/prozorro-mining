@@ -7,6 +7,7 @@ public static class SwaggerExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            options.CustomSchemaIds(type => (type.FullName ?? type.Name).Replace("+", "."));
             options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
             {
                 Title = "ProzorroMining API",

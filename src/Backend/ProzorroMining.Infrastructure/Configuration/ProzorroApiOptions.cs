@@ -8,8 +8,6 @@ public sealed class ProzorroApiOptions
 
     public string? ApiUrl { get; init; }
 
-    public string? ApiKey { get; init; }
-
     [Range(1, 300)]
     public int TimeoutSeconds { get; init; } = 30;
 

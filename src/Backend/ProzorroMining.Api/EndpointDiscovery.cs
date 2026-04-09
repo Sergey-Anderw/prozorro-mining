@@ -1,47 +1,31 @@
 using ProzorroMining.App.Features.Analytics;
 using ProzorroMining.App.Features.Imports;
-using ProzorroMining.App.Features.System;
 
 namespace ProzorroMining.Api;
 internal static class EndpointDiscovery
 {
-   
     public static void MapVerticalSlices(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGetSystemPing();
         endpoints.MapGetImportStatus();
         endpoints.MapRunImport();
-        endpoints.MapGetDashboardOverview();
-    }
-
-    
-    private static void MapGetSystemPing(this IEndpointRouteBuilder endpoints)
-    {
-        endpoints
-            .MapGet("/api/v1/system/ping", async (GetSystemPing.Handler handler, CancellationToken cancellationToken) =>
-            {
-                var response = await handler.HandleAsync(new GetSystemPing.Request(), cancellationToken);
-                return response.ToHttpResult();
-            })
-            .WithName("GetSystemPing")
-            .WithDescription("Get system status")
-            .WithOpenApi()
-            .Produces<object>(StatusCodes.Status200OK);
+        endpoints.MapGetBudgetSavings();
+        endpoints.MapGetTopProcurers();
+        endpoints.MapGetTopSuppliers();
     }
 
     
     private static void MapGetImportStatus(this IEndpointRouteBuilder endpoints)
     {
         endpoints
-            .MapGet("/api/v1/import/status", async (long? importRunId, GetImportStatus.Handler handler, CancellationToken cancellationToken) =>
+            .MapGet("/api/v1/import/status", async (GetImportStatus.Handler handler, CancellationToken cancellationToken) =>
             {
-                var response = await handler.HandleAsync(new GetImportStatus.Request { ImportRunId = importRunId }, cancellationToken);
+                var response = await handler.HandleAsync(new GetImportStatus.Request(), cancellationToken);
                 return response.ToHttpResult();
             })
             .WithName("GetImportStatus")
-            .WithDescription("Get latest import status or a specific import run status")
+            .WithDescription("Get current import status")
             .WithOpenApi()
-            .Produces<object>(StatusCodes.Status200OK);
+            .Produces<GetImportStatus.Response>(StatusCodes.Status200OK);
     }
 
     private static void MapRunImport(this IEndpointRouteBuilder endpoints)
@@ -55,22 +39,50 @@ internal static class EndpointDiscovery
             .WithName("RunImport")
             .WithDescription("Start an import of Prozorro data")
             .WithOpenApi()
-            .Produces<object>(StatusCodes.Status202Accepted)
+            .Produces<RunImport.Response>(StatusCodes.Status202Accepted)
             .Accepts<RunImport.Command>("application/json");
     }
 
     
-    private static void MapGetDashboardOverview(this IEndpointRouteBuilder endpoints)
+    private static void MapGetBudgetSavings(this IEndpointRouteBuilder endpoints)
     {
         endpoints
-            .MapGet("/api/v1/analytics/dashboard", async (GetDashboardOverview.Handler handler, CancellationToken cancellationToken) =>
+            .MapGet("/api/v1/analytics/savings", async (GetBudgetSavings.Handler handler, CancellationToken cancellationToken) =>
             {
-                var response = await handler.HandleAsync(new GetDashboardOverview.Request(), cancellationToken);
+                var response = await handler.HandleAsync(new GetBudgetSavings.Request(), cancellationToken);
                 return response.ToHttpResult();
             })
-            .WithName("GetDashboardOverview")
-            .WithDescription("Get dashboard overview with savings and top entities")
+            .WithName("GetBudgetSavings")
+            .WithDescription("Get total budget savings")
             .WithOpenApi()
-            .Produces<object>(StatusCodes.Status200OK);
+            .Produces<GetBudgetSavings.Response>(StatusCodes.Status200OK);
+    }
+
+    private static void MapGetTopProcurers(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints
+            .MapGet("/api/v1/analytics/top-procurers", async (GetTopProcurers.Handler handler, CancellationToken cancellationToken) =>
+            {
+                var response = await handler.HandleAsync(new GetTopProcurers.Request(), cancellationToken);
+                return response.ToHttpResult();
+            })
+            .WithName("GetTopProcurers")
+            .WithDescription("Get top 5 procurers by contract value")
+            .WithOpenApi()
+            .Produces<IReadOnlyList<GetTopProcurers.ProcurerInfo>>(StatusCodes.Status200OK);
+    }
+
+    private static void MapGetTopSuppliers(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints
+            .MapGet("/api/v1/analytics/top-suppliers", async (GetTopSuppliers.Handler handler, CancellationToken cancellationToken) =>
+            {
+                var response = await handler.HandleAsync(new GetTopSuppliers.Request(), cancellationToken);
+                return response.ToHttpResult();
+            })
+            .WithName("GetTopSuppliers")
+            .WithDescription("Get top 5 suppliers by contract value")
+            .WithOpenApi()
+            .Produces<IReadOnlyList<GetTopSuppliers.SupplierInfo>>(StatusCodes.Status200OK);
     }
 }

@@ -1,5 +1,4 @@
 using System.Data.Common;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace ProzorroMining.Infrastructure.Db;

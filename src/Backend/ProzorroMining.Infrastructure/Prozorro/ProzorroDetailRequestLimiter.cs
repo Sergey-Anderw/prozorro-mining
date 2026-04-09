@@ -1,7 +1,7 @@
 using System.Threading.RateLimiting;
 
 namespace ProzorroMining.Infrastructure.Prozorro;
-internal sealed class ProzorroDetailRequestLimiter : IAsyncDisposable
+public sealed class ProzorroDetailRequestLimiter : IAsyncDisposable
 {
     private readonly TokenBucketRateLimiter _limiter;
 

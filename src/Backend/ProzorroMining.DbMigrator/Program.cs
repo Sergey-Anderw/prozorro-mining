@@ -13,6 +13,7 @@ internal static class Program
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
             .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables()
             .Build();
 
         Log.Logger = new LoggerConfiguration()
@@ -24,10 +25,6 @@ internal static class Program
             Log.Information("Starting ProzorroMining DbMigrator");
 
             var connectionString = configuration.GetConnectionString("DefaultConnection");
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-            }
 
             if (string.IsNullOrWhiteSpace(connectionString))
             {

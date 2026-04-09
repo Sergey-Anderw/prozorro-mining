@@ -23,6 +23,9 @@ public sealed class RunImportOrchestratorTests
         UpdateImportCheckpointRecord? checkpointRecord = null;
 
         importRuns
+            .Setup(x => x.GetRunningAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ImportRunStatusSnapshot?)null);
+        importRuns
             .Setup(x => x.CreateAsync(It.IsAny<CreateImportRunRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42L);
         importRuns
@@ -56,7 +59,7 @@ public sealed class RunImportOrchestratorTests
         var sut = CreateSut(importRuns, checkpoints, persistence, apiClient);
 
         var start = await sut.StartAsync(CancellationToken.None);
-        var result = await sut.ExecuteStartedAsync(start.ImportRunId, start.StartedAt, CancellationToken.None);
+        var result = await sut.ExecuteStartedAsync(start.Data!.ImportRunId, start.Data.StartedAt, CancellationToken.None);
 
         result.Status.Should().Be(ImportRunStatus.Success.ToString());
         result.ProcessedCount.Should().Be(1);
@@ -84,6 +87,9 @@ public sealed class RunImportOrchestratorTests
 
         CompleteImportRunRecord? completionRecord = null;
 
+        importRuns
+            .Setup(x => x.GetRunningAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ImportRunStatusSnapshot?)null);
         importRuns
             .Setup(x => x.CreateAsync(It.IsAny<CreateImportRunRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(77L);
@@ -113,7 +119,7 @@ public sealed class RunImportOrchestratorTests
         var sut = CreateSut(importRuns, checkpoints, persistence, apiClient);
 
         var start = await sut.StartAsync(CancellationToken.None);
-        var result = await sut.ExecuteStartedAsync(start.ImportRunId, start.StartedAt, CancellationToken.None);
+        var result = await sut.ExecuteStartedAsync(start.Data!.ImportRunId, start.Data.StartedAt, CancellationToken.None);
 
         result.Status.Should().Be(ImportRunStatus.Success.ToString());
         result.ProcessedCount.Should().Be(1);
@@ -137,6 +143,9 @@ public sealed class RunImportOrchestratorTests
         var persistence = new Mock<IImportedTenderPersistence>();
         var apiClient = new Mock<IProzorroApiClient>();
 
+        importRuns
+            .Setup(x => x.GetRunningAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ImportRunStatusSnapshot?)null);
         importRuns
             .Setup(x => x.CreateAsync(It.IsAny<CreateImportRunRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(88L);
@@ -176,13 +185,44 @@ public sealed class RunImportOrchestratorTests
         var sut = CreateSut(importRuns, checkpoints, persistence, apiClient);
 
         var start = await sut.StartAsync(CancellationToken.None);
-        var result = await sut.ExecuteStartedAsync(start.ImportRunId, start.StartedAt, CancellationToken.None);
+        var result = await sut.ExecuteStartedAsync(start.Data!.ImportRunId, start.Data.StartedAt, CancellationToken.None);
 
         result.PagesTraversed.Should().Be(1);
         result.InsertedCount.Should().Be(1);
         apiClient.Verify(x => x.GetTenderAsync("recent-tender", It.IsAny<CancellationToken>()), Times.Once);
         apiClient.Verify(x => x.GetTenderAsync("old-tender", It.IsAny<CancellationToken>()), Times.Never);
         apiClient.Verify(x => x.GetTendersPageAsync("/api/2.5/tenders?descending=1&offset=next-token", true, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task StartAsync_ReturnsConflict_WhenAnotherImportIsAlreadyRunning()
+    {
+        var importRuns = new Mock<IImportRunRepository>();
+        var checkpoints = new Mock<IImportCheckpointRepository>();
+        var persistence = new Mock<IImportedTenderPersistence>();
+        var apiClient = new Mock<IProzorroApiClient>();
+
+        importRuns
+            .Setup(x => x.GetRunningAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ImportRunStatusSnapshot(
+                15L,
+                ImportRunStatus.Running.ToString(),
+                DateTime.UtcNow,
+                null,
+                10,
+                2,
+                1,
+                0,
+                null));
+
+        var sut = CreateSut(importRuns, checkpoints, persistence, apiClient);
+
+        var result = await sut.StartAsync(CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().NotBeNull();
+        result.Error!.Code.Should().Be("CONFLICT");
+        importRuns.Verify(x => x.CreateAsync(It.IsAny<CreateImportRunRecord>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static RunImportOrchestrator CreateSut(
