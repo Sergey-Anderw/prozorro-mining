@@ -312,13 +312,57 @@ The frontend polls import status while an import is running.
 
 ## Testing
 
-The repository currently contains unit tests for import behavior and filtering logic.
+The repository contains:
 
-Run tests:
+- unit tests for import orchestration and tender eligibility policy
+- integration tests for API endpoints and PostgreSQL persistence behavior
+
+### Unit Tests
+
+These tests validate pure application logic without a real database or HTTP host.
+
+They check that:
+
+- import orchestration completes correctly for eligible and ineligible tenders
+- import traversal stops at the configured time window
+- a second import cannot start while another one is already running
+- the eligibility policy accepts only the required Prozorro tenders
+
+Run unit tests:
 
 ```powershell
 dotnet test tests/Backend/ProzorroMining.UnitTests/ProzorroMining.UnitTests.csproj
 ```
+
+### Integration Tests
+
+The integration test project starts the real API with `WebApplicationFactory`, provisions PostgreSQL through `Testcontainers`, applies the committed SQL migration, and then verifies end-to-end behavior against the real schema and repository SQL.
+
+These tests cover:
+
+- `GET /health/live`
+  confirms the application host starts and responds through the real HTTP pipeline
+- `GET /api/v1/import/status`
+  verifies that the API returns `Pending` for an empty database and prefers the currently running import over older completed runs
+- `GET /api/v1/analytics/savings`
+  checks that budget savings are aggregated from persisted tenders and contracts
+- `GET /api/v1/analytics/top-procurers`
+  checks grouping, fallback to `Unknown`, descending ordering, and top-5 limiting
+- `GET /api/v1/analytics/top-suppliers`
+  checks supplier aggregation over `suppliers`, `tender_suppliers`, and `contracts`
+- `ImportedTenderPersistence.PersistAsync`
+  verifies the tender aggregate is upserted idempotently and that contracts and supplier links are refreshed instead of duplicated
+
+Run integration tests:
+
+```powershell
+dotnet test tests/Backend/ProzorroMining.IntegrationTests/ProzorroMining.IntegrationTests.csproj
+```
+
+Important:
+
+- Docker must be running because the integration tests use a PostgreSQL container
+- the test database schema is recreated from `src/Backend/ProzorroMining.DbMigrator/Migrations/0001__initial_schema.sql`
 
 ## Known Limitations
 
