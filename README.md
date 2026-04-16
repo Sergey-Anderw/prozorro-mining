@@ -315,7 +315,7 @@ The frontend polls import status while an import is running.
 The repository contains:
 
 - unit tests for import orchestration and tender eligibility policy
-- integration tests for API endpoints and PostgreSQL persistence behavior
+- minimal E2E / API tests for the backend HTTP surface
 
 ### Unit Tests
 
@@ -334,26 +334,20 @@ Run unit tests:
 dotnet test tests/Backend/ProzorroMining.UnitTests/ProzorroMining.UnitTests.csproj
 ```
 
-### Integration Tests
+### E2E / API Tests
 
-The integration test project starts the real API with `WebApplicationFactory`, provisions PostgreSQL through `Testcontainers`, applies the committed SQL migration, and then verifies end-to-end behavior against the real schema and repository SQL.
+The test project starts the real API through `WebApplicationFactory`, connects it to PostgreSQL from `Testcontainers`, applies the real SQL migration, and then calls the HTTP endpoints exactly as a client would.
 
-These tests cover:
+The current minimal E2E / API set covers:
 
 - `GET /health/live`
-  confirms the application host starts and responds through the real HTTP pipeline
+  checks that the application starts and the HTTP pipeline is alive
 - `GET /api/v1/import/status`
-  verifies that the API returns `Pending` for an empty database and prefers the currently running import over older completed runs
+  checks two important states: empty database returns `Pending`, and an existing running import is returned instead of an older completed run
 - `GET /api/v1/analytics/savings`
-  checks that budget savings are aggregated from persisted tenders and contracts
-- `GET /api/v1/analytics/top-procurers`
-  checks grouping, fallback to `Unknown`, descending ordering, and top-5 limiting
-- `GET /api/v1/analytics/top-suppliers`
-  checks supplier aggregation over `suppliers`, `tender_suppliers`, and `contracts`
-- `ImportedTenderPersistence.PersistAsync`
-  verifies the tender aggregate is upserted idempotently and that contracts and supplier links are refreshed instead of duplicated
+  checks that the analytics endpoint returns the correct savings value calculated from persisted tenders and contracts
 
-Run integration tests:
+Run E2E / API tests:
 
 ```powershell
 dotnet test tests/Backend/ProzorroMining.IntegrationTests/ProzorroMining.IntegrationTests.csproj
